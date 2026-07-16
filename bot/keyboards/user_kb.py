@@ -94,7 +94,7 @@ class UserKeyboards:
         return ReplyKeyboardMarkup([
             ["🛒 Buy Agent", "📤 Sell Agent"],
             ["👛 Wallet", "👥 Referral"],
-            ["🆘 Support", "🚩 Report", "🎁 Claim"]
+            ["🆘 Support", "🚩 Report", "🎟 Coupons"]
         ], resize_keyboard=True)
 
     @staticmethod

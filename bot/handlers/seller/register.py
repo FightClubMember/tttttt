@@ -8,8 +8,9 @@ from bot.keyboards.seller_kb import SellerKeyboards
 from bot.keyboards.user_kb import UserKeyboards
 from bot.middlewares.blacklist import blacklist_check
 from bot.middlewares.rate_limit import rate_limit
-from bot.states.fsm import SELL_NAME, SELL_FILE
+from bot.states.fsm import SELL_NAME, SELL_FILE, SELL_PRICE
 from bot.utils.visual import Visual
+from bot.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,24 @@ async def file_input_handler(update: Update, context: CallbackContext) -> int:
         )
         return SELL_FILE
 
+    context.user_data["sell_form"]["file_id"] = file_id
+
+    # If the user is an admin, let them set the price directly
+    if user_id in settings.ADMIN_IDS:
+        text = (
+            f"{Visual.header('Admin Agent Upload')}\n"
+            f"📦 Agent ID: <b>{context.user_data['sell_form']['name']}</b>\n\n"
+            f"💰 Please type the <b>purchase price (credits)</b> for this listing in the marketplace:"
+        )
+        await context.bot.edit_message_text(
+            chat_id=user_id,
+            message_id=bot_msg_id,
+            text=text,
+            parse_mode="HTML",
+            reply_markup=SellerKeyboards.cancel_submission()
+        )
+        return SELL_PRICE
+
     name = context.user_data["sell_form"]["name"]
 
     async with AsyncSessionLocal() as session:
@@ -154,6 +173,82 @@ async def file_input_handler(update: Update, context: CallbackContext) -> int:
     
     return ConversationHandler.END
 
+async def price_input_handler(update: Update, context: CallbackContext) -> int:
+    """Handles admin setting the price directly and publishes the bot."""
+    message = update.message
+    user_id = message.from_user.id
+    price_text = message.text.strip()
+
+    try:
+        await context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
+    except Exception:
+        pass
+
+    bot_msg_id = context.user_data.get("menu_msg_id")
+    if not bot_msg_id:
+        return ConversationHandler.END
+
+    try:
+        price = float(price_text)
+        if price < 0:
+            raise ValueError()
+    except ValueError:
+        await context.bot.edit_message_text(
+            chat_id=user_id,
+            message_id=bot_msg_id,
+            text="⚠️ Invalid price. Please type a positive numeric credit value:",
+            reply_markup=SellerKeyboards.cancel_submission()
+        )
+        return SELL_PRICE
+
+    name = context.user_data["sell_form"]["name"]
+    file_id = context.user_data["sell_form"]["file_id"]
+
+    async with AsyncSessionLocal() as session:
+        agent_repo = AgentRepository(session)
+        
+        # Ensure a default category exists
+        cats = await agent_repo.get_all_categories(include_hidden=True)
+        if cats:
+            cat_id = cats[0].id
+        else:
+            new_cat = Category(name="General", icon="🤖")
+            await agent_repo.add(new_cat)
+            await session.commit()
+            cat_id = new_cat.id
+
+        # Publish listing directly
+        new_agent = Agent(
+            seller_id=user_id,
+            category_id=cat_id,
+            name=name,
+            description="Official Agent Listing",
+            version="1.0",
+            price=price,
+            file_id=file_id,
+            features="Direct Upload",
+            status="active"
+        )
+        await agent_repo.add(new_agent)
+        await session.commit()
+
+    text = (
+        f"{Visual.header('Agent Published')}\n"
+        f"✅ <b>Your bot has been successfully published directly!</b>\n\n"
+        f"Name: <b>{name}</b>\n"
+        f"Price: <b>{price} Credits</b>\n"
+        f"Status: <code>Active & Published</code>"
+    )
+    
+    await context.bot.edit_message_text(
+        chat_id=user_id,
+        message_id=bot_msg_id,
+        text=text,
+        parse_mode="HTML",
+        reply_markup=UserKeyboards.back_to_main()
+    )
+    return ConversationHandler.END
+
 @rate_limit
 @blacklist_check
 async def cancel_sell_callback(update: Update, context: CallbackContext) -> int:
@@ -175,7 +270,8 @@ seller_conv_handler = ConversationHandler(
     ],
     states={
         SELL_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name_input_handler)],
-        SELL_FILE: [MessageHandler((filters.Document.ALL | filters.PHOTO) & ~filters.COMMAND, file_input_handler)]
+        SELL_FILE: [MessageHandler((filters.Document.ALL | filters.PHOTO) & ~filters.COMMAND, file_input_handler)],
+        SELL_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, price_input_handler)]
     },
     fallbacks=[CallbackQueryHandler(cancel_sell_callback, pattern="^sell:cancel$")],
     per_message=False

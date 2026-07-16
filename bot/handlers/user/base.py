@@ -269,26 +269,27 @@ async def reply_keyboard_routing_handler(update: Update, context: CallbackContex
     first_name = update.effective_user.first_name
 
     async with AsyncSessionLocal() as session:
-        if "Buy Agent" in text:
+        text_lower = text.lower()
+        if "buy agent" in text_lower:
             from bot.handlers.user.marketplace import categories_list_callback
             await categories_list_callback(update, context)
-        elif "Sell Agent" in text:
+        elif "sell agent" in text_lower:
             from bot.handlers.seller.register import seller_register_start_callback
             await seller_register_start_callback(update, context)
-        elif "Wallet" in text:
+        elif "wallet" in text_lower:
             from bot.handlers.user.wallet import wallet_menu_callback
             await wallet_menu_callback(update, context)
-        elif "Referral" in text:
+        elif "referral" in text_lower:
             from bot.handlers.user.wallet import referral_menu_callback
             await referral_menu_callback(update, context)
-        elif "Support" in text:
+        elif "support" in text_lower:
             from bot.handlers.support.ticket import support_menu_callback
             await support_menu_callback(update, context)
-        elif "Report" in text:
+        elif "report" in text_lower:
             from bot.handlers.support.ticket import ticket_create_start_callback
             await ticket_create_start_callback(update, context)
-        elif "Claim" in text:
-            from bot.handlers.user.check_in import check_in_callback
-            await check_in_callback(update, context)
+        elif "coupon" in text_lower:
+            from bot.handlers.user.wallet import coupon_start_callback
+            await coupon_start_callback(update, context)
         else:
             await show_main_menu(update, context, session, user_id, first_name)

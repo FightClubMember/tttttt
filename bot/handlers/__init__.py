@@ -45,7 +45,7 @@ def register_all_handlers(application: Application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(
         MessageHandler(
-            filters.Regex("^(🛒 Buy Agent|📤 Sell Agent|👛 Wallet|👥 Referral|🆘 Support|🚩 Report|🎁 Claim)$"),
+            filters.TEXT & ~filters.COMMAND,
             reply_keyboard_routing_handler
         )
     )
