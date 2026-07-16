@@ -275,7 +275,7 @@ async def reply_keyboard_routing_handler(update: Update, context: CallbackContex
             if isinstance(handler, ConversationHandler):
                 key = handler._get_key(update)
                 if key:
-                    handler.update_state(ConversationHandler.END, key)
+                    handler._update_state(ConversationHandler.END, key)
     except Exception as e:
         logger.error(f"Error resetting conversation states: {e}")
 
