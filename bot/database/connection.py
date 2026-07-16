@@ -9,11 +9,9 @@ if db_url.startswith("postgresql://"):
 elif db_url.startswith("sqlite://") and not db_url.startswith("sqlite+aiosqlite://"):
     db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
 
-# Strip 'sslmode' query parameter since asyncpg doesn't support it (passes it to connect() causing NameError/TypeError)
+# Strip any query parameters (like sslmode, channel_binding) since asyncpg doesn't support them in the connection URL
 if "postgresql" in db_url and "?" in db_url:
-    base_url, query = db_url.split("?", 1)
-    params = [p for p in query.split("&") if not p.startswith("sslmode=")]
-    db_url = f"{base_url}?{'&'.join(params)}" if params else base_url
+    db_url = db_url.split("?", 1)[0]
 
 engine_kwargs = {}
 if "sqlite" in db_url:
