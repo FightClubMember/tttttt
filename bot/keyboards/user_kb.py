@@ -6,28 +6,11 @@ from bot.models.settings import ForceJoinChannel
 class UserKeyboards:
     @staticmethod
     def main_menu(unread_notifs: int = 0, is_admin: bool = False) -> InlineKeyboardMarkup:
-        """Returns the main menu grid keyboard (excluding items on reply keyboard)."""
-        notif_label = f"🔔 Notifications ({unread_notifs})" if unread_notifs > 0 else "🔔 Notifications"
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("⭐ Favorites", callback_data="user_menu:favorites"),
-                InlineKeyboardButton("❤️ Wishlist", callback_data="user_menu:wishlist")
-            ],
-            [
-                InlineKeyboardButton(notif_label, callback_data="user_menu:notifications"),
-                InlineKeyboardButton("🎟 Coupons", callback_data="user_menu:coupons")
-            ],
-            [
-                InlineKeyboardButton("⚙ Settings", callback_data="user_menu:settings"),
-                InlineKeyboardButton("ℹ About", callback_data="user_menu:about")
-            ]
-        ]
-        
+        """Returns the main menu inline keyboard (only contains Admin Panel if admin, else None)."""
+        keyboard = []
         if is_admin:
             keyboard.append([InlineKeyboardButton("🛠 Admin Panel", callback_data="admin:dashboard")])
-            
-        return InlineKeyboardMarkup(keyboard)
+        return InlineKeyboardMarkup(keyboard) if keyboard else None
 
     @staticmethod
     def wallet_menu() -> InlineKeyboardMarkup:
