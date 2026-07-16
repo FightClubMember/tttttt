@@ -255,7 +255,7 @@ async def admin_reject_agent_callback(update: Update, context: CallbackContext):
 
 # Admin approval conversation FSM
 admin_moderation_conv = ConversationHandler(
-    entry_points=[CallbackQueryHandler(admin_approve_agent_callback, pattern="^admin:moderation:approve:\d+$")],
+    entry_points=[CallbackQueryHandler(admin_approve_agent_callback, pattern=r"^admin:moderation:approve:\d+$")],
     states={
         ADMIN_APPROVE_REWARD: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_approve_reward_handler)]
     },

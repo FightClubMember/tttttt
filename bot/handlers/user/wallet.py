@@ -146,21 +146,29 @@ async def export_statement_callback(update: Update, context: CallbackContext):
 async def coupon_start_callback(update: Update, context: CallbackContext) -> int:
     """Prompts user to type coupon code (FSM Start)."""
     query = update.callback_query
-    user_id = query.from_user.id
+    user_id = query.from_user.id if query else update.effective_user.id
     
     text = (
         f"{Visual.header('Redeem Coupon')}\n"
         f"🎟 Enter your promotional coupon code below.\n\n"
         f"💡 Codes are case-insensitive."
     )
-    msg = await query.edit_message_text(
-        text=text,
-        parse_mode="HTML",
-        reply_markup=UserKeyboards.back_to_main()
-    )
-    
-    # Store bot message ID to edit later
-    context.user_data["menu_msg_id"] = msg.message_id
+    if query:
+        msg = await query.edit_message_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=UserKeyboards.back_to_main()
+        )
+        context.user_data["menu_msg_id"] = msg.message_id
+        await query.answer()
+    else:
+        if update.message:
+            msg = await update.message.reply_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=UserKeyboards.back_to_main()
+            )
+            context.user_data["menu_msg_id"] = msg.message_id
     return COUPON_INPUT_STATE
 
 async def coupon_input_handler(update: Update, context: CallbackContext) -> int:

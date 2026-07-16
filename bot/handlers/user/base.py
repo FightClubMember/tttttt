@@ -63,7 +63,7 @@ async def start_command(update: Update, context: CallbackContext):
         await show_main_menu(update, context, session, user_id, first_name)
 
 async def show_main_menu(update: Update, context: CallbackContext, session, user_id: int, first_name: str, edit: bool = False):
-    """Auxiliary function to render the Main Menu dashboard."""
+    """Auxiliary function to render the Main Menu dashboard with premium banner branding."""
     # Count unread notifications
     admin_repo = AdminRepository(session)
     notifs = await admin_repo.get_unread_notifications(user_id)
@@ -74,13 +74,20 @@ async def show_main_menu(update: Update, context: CallbackContext, session, user
     user = await user_repo.get_user(user_id)
     credits_val = user.credits if user else 0.0
 
+    # Welcome banner with bot branding
+    banner = (
+        f"⚡ <b>M O N E Y   A G E N T   M A R K E T P L A C E</b> ⚡\n"
+        f"<i>Secure • Fast • Automated Bot Exchange</i>\n"
+        f"{Visual.BORDER}\n"
+    )
+
     text = (
+        f"{banner}"
+        f"👤 User Account: <b>{first_name}</b>\n"
+        f"💰 Wallet Balance: <b>{credits_val} Credits</b>\n"
+        f"📩 Unread Notifications: <b>{unread_count}</b>\n"
         f"{Visual.BORDER}\n"
-        f"💎 <b>Money Agent Marketplace</b>\n\n"
-        f"👤 User: <b>{first_name}</b>\n"
-        f"💰 Balance: <b>{credits_val} Credits</b>\n"
-        f"{Visual.BORDER}\n"
-        f"Welcome to the premium digital agent marketplace! Explore, purchase, or upload your custom automation agents."
+        f"Explore, purchase, or upload automation agents. Use the persistent bottom menu to navigate seamlessly!"
     )
 
     from bot.config import settings
@@ -278,8 +285,8 @@ async def reply_keyboard_routing_handler(update: Update, context: CallbackContex
             from bot.handlers.support.ticket import support_menu_callback
             await support_menu_callback(update, context)
         elif "Report" in text:
-            from bot.handlers.support.ticket import ticket_start_callback
-            await ticket_start_callback(update, context)
+            from bot.handlers.support.ticket import ticket_create_start_callback
+            await ticket_create_start_callback(update, context)
         elif "Claim" in text:
             from bot.handlers.user.check_in import check_in_callback
             await check_in_callback(update, context)
