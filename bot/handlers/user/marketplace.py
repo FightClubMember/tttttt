@@ -30,12 +30,21 @@ async def categories_list_callback(update: Update, context: CallbackContext):
             f"{Visual.header('Marketplace Catalog')}\n"
             f"Select a category below to explore premium digital agents:"
         )
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=UserKeyboards.categories_list(categories)
-        )
-        await query.answer()
+        reply_markup = UserKeyboards.categories_list(categories)
+        if query:
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+            await query.answer()
+        else:
+            if update.message:
+                await update.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
 
 @rate_limit
 @blacklist_check
@@ -119,6 +128,37 @@ async def agent_details_callback(update: Update, context: CallbackContext):
             text=text,
             parse_mode="HTML",
             reply_markup=UserKeyboards.agent_details(agent_id, is_fav, is_wl)
+        )
+        await query.answer()
+
+@rate_limit
+@blacklist_check
+async def agent_terms_callback(update: Update, context: CallbackContext):
+    """Shows pre-checkout Terms & Conditions acceptance screen."""
+    query = update.callback_query
+    agent_id = int(query.data.split(":")[2])
+    
+    async with AsyncSessionLocal() as session:
+        from bot.repositories.admin_repo import AdminRepository
+        admin_repo = AdminRepository(session)
+        terms = await admin_repo.get_setting("terms_and_conditions")
+        if not terms:
+            terms = (
+                "<b>Money Agent Marketplace Terms of Service</b>\n\n"
+                "1. All purchases are final. No refunds will be provided after files are delivered.\n"
+                "2. Redistribution, resale, or sublicensing of purchased agent codes is strictly prohibited.\n"
+                "3. We do not guarantee compatibility with all external systems. Please run tests carefully."
+            )
+            
+        text = (
+            f"{Visual.header('Terms & Conditions')}\n"
+            f"{terms}\n\n"
+            f"⚠️ <b>By proceeding, you explicitly agree to the above terms and conditions.</b>"
+        )
+        await query.edit_message_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=UserKeyboards.terms_and_conditions(agent_id)
         )
         await query.answer()
 

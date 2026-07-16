@@ -22,13 +22,16 @@ COUPON_INPUT_STATE = 600
 async def wallet_menu_callback(update: Update, context: CallbackContext):
     """Renders user's wallet and transaction stats."""
     query = update.callback_query
-    user_id = query.from_user.id
+    user_id = query.from_user.id if query else update.effective_user.id
 
     async with AsyncSessionLocal() as session:
         user_repo = UserRepository(session)
         user = await user_repo.get_user(user_id)
         if not user:
-            await query.answer("User not found.", show_alert=True)
+            if query:
+                await query.answer("User not found.", show_alert=True)
+            else:
+                await update.message.reply_text("User not found.")
             return
 
         text = (
@@ -40,19 +43,28 @@ async def wallet_menu_callback(update: Update, context: CallbackContext):
             f"📤 Sold Credits: <b>{user.sold_credits} Credits</b>\n"
             f"{Visual.footer()}"
         )
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=UserKeyboards.wallet_menu()
-        )
-        await query.answer()
+        reply_markup = UserKeyboards.wallet_menu()
+        if query:
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+            await query.answer()
+        else:
+            if update.message:
+                await update.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
 
 @rate_limit
 @blacklist_check
 async def referral_menu_callback(update: Update, context: CallbackContext):
     """Renders referral rewards statistics and unique invitation link."""
     query = update.callback_query
-    user_id = query.from_user.id
+    user_id = query.from_user.id if query else update.effective_user.id
     bot_info = await context.bot.get_me()
 
     async with AsyncSessionLocal() as session:
@@ -82,12 +94,22 @@ async def referral_menu_callback(update: Update, context: CallbackContext):
             text += f" {idx}. {name} — <b>{count} invites</b>\n"
 
         text += Visual.footer()
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=UserKeyboards.back_to_main()
-        )
-        await query.answer()
+        reply_markup = UserKeyboards.back_to_main()
+        
+        if query:
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+            await query.answer()
+        else:
+            if update.message:
+                await update.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
 
 @rate_limit
 @blacklist_check
@@ -181,7 +203,7 @@ async def coupon_cancel_callback(update: Update, context: CallbackContext) -> in
     return ConversationHandler.END
 
 coupon_conv_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(coupon_start_callback, pattern="^wallet:redeem_coupon$")],
+    entry_points=[CallbackQueryHandler(coupon_start_callback, pattern="^(wallet:redeem_coupon|user_menu:coupons)$")],
     states={
         COUPON_INPUT_STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, coupon_input_handler)]
     },

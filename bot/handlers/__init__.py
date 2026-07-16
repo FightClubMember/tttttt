@@ -1,13 +1,17 @@
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
 # Import all handler components
-from bot.handlers.user.base import start_command, verify_join_callback, menu_navigation_callback
+from bot.handlers.user.base import (
+    start_command, verify_join_callback, menu_navigation_callback,
+    reply_keyboard_routing_handler, view_notifications_callback
+)
 from bot.handlers.user.wallet import wallet_menu_callback, referral_menu_callback, export_statement_callback, coupon_conv_handler
 from bot.handlers.user.check_in import check_in_callback
 from bot.handlers.user.marketplace import (
     categories_list_callback, category_agents_callback, agent_details_callback,
-    buy_agent_callback, download_file_callback, toggle_fav_callback, toggle_wl_callback,
-    view_favorites_callback, view_wishlist_callback, search_conv_handler, review_conv_handler
+    agent_terms_callback, buy_agent_callback, download_file_callback, toggle_fav_callback, 
+    toggle_wl_callback, view_favorites_callback, view_wishlist_callback, search_conv_handler, 
+    review_conv_handler
 )
 from bot.handlers.support.ticket import support_menu_callback, view_ticket_callback, close_ticket_callback, ticket_conv_handler
 from bot.handlers.seller.register import seller_conv_handler
@@ -19,7 +23,7 @@ from bot.handlers.admin.users import (
 from bot.handlers.admin.items import (
     admin_categories_callback, admin_category_edit_callback,
     admin_moderation_queue_callback, admin_inspect_agent_callback,
-    admin_approve_agent_callback, admin_reject_agent_callback
+    admin_reject_agent_callback, admin_moderation_conv
 )
 from bot.handlers.admin.force_join import (
     admin_force_join_menu_callback, admin_channel_edit_callback,
@@ -37,8 +41,14 @@ from bot.handlers.admin.settings import (
 def register_all_handlers(application: Application):
     """Registers all bot handlers systematically to the application."""
     
-    # 1. Start command
+    # 1. Start command & Reply Keyboard message router
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(
+        MessageHandler(
+            filters.Regex("^(🛒 Buy Agent|📤 Sell Agent|👛 Wallet|👥 Referral|🆘 Support|🚩 Report|🎁 Claim)$"),
+            reply_keyboard_routing_handler
+        )
+    )
 
     # 2. Conversation FSM Handlers (higher priority first)
     application.add_handler(seller_conv_handler)
@@ -54,6 +64,7 @@ def register_all_handlers(application: Application):
     application.add_handler(channel_add_conv)
     application.add_handler(broadcast_conv)
     application.add_handler(backup_restore_conv)
+    application.add_handler(admin_moderation_conv)
 
     # 3. Base navigation callbacks
     application.add_handler(CallbackQueryHandler(verify_join_callback, pattern="^force_join:verify$"))
@@ -68,12 +79,14 @@ def register_all_handlers(application: Application):
     application.add_handler(CallbackQueryHandler(support_menu_callback, pattern="^user_menu:support$"))
     application.add_handler(CallbackQueryHandler(view_favorites_callback, pattern="^user_menu:favorites$"))
     application.add_handler(CallbackQueryHandler(view_wishlist_callback, pattern="^user_menu:wishlist$"))
+    application.add_handler(CallbackQueryHandler(view_notifications_callback, pattern="^user_menu:notifications$"))
 
     # 5. Catalog callbacks
     application.add_handler(CallbackQueryHandler(categories_list_callback, pattern="^user_menu:buy$"))
     application.add_handler(CallbackQueryHandler(category_agents_callback, pattern="^catalog:cat:\\d+$"))
     application.add_handler(CallbackQueryHandler(agent_details_callback, pattern="^catalog:agent:\\d+$"))
-    application.add_handler(CallbackQueryHandler(buy_agent_callback, pattern="^catalog:buy:\\d+$"))
+    application.add_handler(CallbackQueryHandler(agent_terms_callback, pattern="^catalog:terms:\\d+$"))
+    application.add_handler(CallbackQueryHandler(buy_agent_callback, pattern="^catalog:tc_accept:\\d+$"))
     application.add_handler(CallbackQueryHandler(download_file_callback, pattern="^catalog:download:\\d+$"))
     application.add_handler(CallbackQueryHandler(toggle_fav_callback, pattern="^catalog:toggle_fav:\\d+$"))
     application.add_handler(CallbackQueryHandler(toggle_wl_callback, pattern="^catalog:toggle_wl:\\d+$"))
@@ -97,7 +110,6 @@ def register_all_handlers(application: Application):
     application.add_handler(CallbackQueryHandler(admin_category_edit_callback, pattern="^admin:cat:edit:\\d+$"))
     application.add_handler(CallbackQueryHandler(admin_moderation_queue_callback, pattern="^admin:menu:agents$"))
     application.add_handler(CallbackQueryHandler(admin_inspect_agent_callback, pattern="^admin:mod:inspect:\\d+$"))
-    application.add_handler(CallbackQueryHandler(admin_approve_agent_callback, pattern="^admin:modact:approve:\\d+$"))
     application.add_handler(CallbackQueryHandler(admin_reject_agent_callback, pattern="^admin:modact:reject:\\d+$"))
 
     # Admin force join callbacks

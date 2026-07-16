@@ -21,7 +21,7 @@ TICKET_REPLY_STATE = 302
 async def support_menu_callback(update: Update, context: CallbackContext):
     """Renders support tickets list for users."""
     query = update.callback_query
-    user_id = query.from_user.id
+    user_id = query.from_user.id if query else update.effective_user.id
 
     async with AsyncSessionLocal() as session:
         admin_repo = AdminRepository(session)
@@ -29,7 +29,8 @@ async def support_menu_callback(update: Update, context: CallbackContext):
 
         text = (
             f"{Visual.header('Support Center')}\n"
-            f"Need assistance? Open a support ticket below or view your existing tickets:\n\n"
+            f"Need assistance? Open a support ticket below, view your tickets, "
+            f"or contact us directly on Telegram: <b>@Agen_Supporrt_bot</b>\n\n"
         )
         keyboard = []
         for ticket in tickets:
@@ -39,12 +40,22 @@ async def support_menu_callback(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton("➕ Open New Ticket", callback_data="ticket:create")])
         keyboard.append([InlineKeyboardButton("🔙 Back to Main", callback_data="user_menu:main")])
 
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        await query.answer()
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        if query:
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+            await query.answer()
+        else:
+            if update.message:
+                await update.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
 
 @rate_limit
 @blacklist_check
@@ -122,14 +133,24 @@ async def ticket_create_start_callback(update: Update, context: CallbackContext)
     query = update.callback_query
     text = (
         f"{Visual.header('Open Support Ticket')}\n"
-        f"✍️ Please type a short, descriptive <b>Subject</b> for your ticket:"
+        f"✍️ Please type a short, descriptive <b>Subject</b> for your ticket (or detail your report):"
     )
-    msg = await query.edit_message_text(
-        text=text,
-        parse_mode="HTML",
-        reply_markup=UserKeyboards.back_to_main()
-    )
-    context.user_data["menu_msg_id"] = msg.message_id
+    if query:
+        msg = await query.edit_message_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=UserKeyboards.back_to_main()
+        )
+        context.user_data["menu_msg_id"] = msg.message_id
+        await query.answer()
+    else:
+        if update.message:
+            msg = await update.message.reply_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=UserKeyboards.back_to_main()
+            )
+            context.user_data["menu_msg_id"] = msg.message_id
     return TICKET_SUBJ_STATE
 
 async def ticket_subject_input_handler(update: Update, context: CallbackContext) -> int:

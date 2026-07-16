@@ -1,5 +1,5 @@
 from typing import List
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from bot.models.agent import Category, Agent
 from bot.models.settings import ForceJoinChannel
 
@@ -99,13 +99,22 @@ class UserKeyboards:
         return InlineKeyboardMarkup(keyboard)
 
     @staticmethod
+    def main_reply_keyboard() -> ReplyKeyboardMarkup:
+        """Returns the persistent bottom reply keyboard."""
+        return ReplyKeyboardMarkup([
+            ["🛒 Buy Agent", "📤 Sell Agent"],
+            ["👛 Wallet", "👥 Referral"],
+            ["🆘 Support", "🚩 Report", "🎁 Claim"]
+        ], resize_keyboard=True)
+
+    @staticmethod
     def agent_details(agent_id: int, is_fav: bool = False, is_wl: bool = False) -> InlineKeyboardMarkup:
         """Generates buttons for agent details card."""
         fav_text = "⭐ Remove Favorite" if is_fav else "⭐ Favorite"
         wl_text = "❤️ Remove Wishlist" if is_wl else "❤️ Wishlist"
         
         keyboard = [
-            [InlineKeyboardButton("💎 Buy Agent", callback_data=f"catalog:buy:{agent_id}")],
+            [InlineKeyboardButton("💎 Buy Agent", callback_data=f"catalog:terms:{agent_id}")],
             [
                 InlineKeyboardButton(fav_text, callback_data=f"catalog:toggle_fav:{agent_id}"),
                 InlineKeyboardButton(wl_text, callback_data=f"catalog:toggle_wl:{agent_id}")
@@ -113,6 +122,14 @@ class UserKeyboards:
             [InlineKeyboardButton("🔙 Back", callback_data="catalog:back_to_list")]
         ]
         return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def terms_and_conditions(agent_id: int) -> InlineKeyboardMarkup:
+        """Terms and Conditions acceptance options before checkout."""
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Accept & Buy", callback_data=f"catalog:tc_accept:{agent_id}")],
+            [InlineKeyboardButton("❌ Decline", callback_data=f"catalog:agent:{agent_id}")]
+        ])
 
     @staticmethod
     def download_agent(file_id: str, agent_id: int) -> InlineKeyboardMarkup:

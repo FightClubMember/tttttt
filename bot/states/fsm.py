@@ -46,3 +46,6 @@
     REVIEW_SUBMIT_STARS,
     REVIEW_SUBMIT_TEXT
 ) = range(500, 502)
+
+# Admin approve reward input state
+ADMIN_APPROVE_REWARD = 604

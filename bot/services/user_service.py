@@ -143,9 +143,9 @@ class UserService:
             daily = DailyReward(user_id=user_id, last_check_in=now, streak=1)
             await self.user_repo.add(daily)
 
-        # Streak calculation (e.g. +0.1 credits per streak day, max 2.0 credits bonus)
-        streak_bonus = min(daily.streak * 0.1, 2.0)
-        earned = reward_base + streak_bonus
+        # Random reward between 0.6 and 1.0 credits
+        import random
+        earned = round(random.uniform(0.6, 1.0), 2)
         if double_rewards:
             earned *= 2
 

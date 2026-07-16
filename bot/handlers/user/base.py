@@ -8,9 +8,12 @@ from bot.middlewares.force_join import get_missing_force_joins
 from bot.middlewares.blacklist import blacklist_check
 from bot.middlewares.rate_limit import rate_limit
 from bot.utils.visual import Visual
+from bot.repositories.admin_repo import AdminRepository
+from bot.repositories.user_repo import UserRepository
 
 logger = logging.getLogger(__name__)
 
+@rate_limit
 @blacklist_check
 async def start_command(update: Update, context: CallbackContext):
     """Processes the /start command (including referrals start parameter)."""
@@ -34,6 +37,13 @@ async def start_command(update: Update, context: CallbackContext):
             referrer_id=referrer_id
         )
         
+        # Send persistent reply keyboard first
+        await update.message.reply_text(
+            text=f"👋 Welcome to the <b>{Visual.header('Money Agent Marketplace')}</b>!",
+            parse_mode="HTML",
+            reply_markup=UserKeyboards.main_reply_keyboard()
+        )
+
         # Check Force Join requirements
         missing = await get_missing_force_joins(user_id, context.bot, session)
         if missing:
@@ -55,13 +65,11 @@ async def start_command(update: Update, context: CallbackContext):
 async def show_main_menu(update: Update, context: CallbackContext, session, user_id: int, first_name: str, edit: bool = False):
     """Auxiliary function to render the Main Menu dashboard."""
     # Count unread notifications
-    from bot.repositories.admin_repo import AdminRepository
     admin_repo = AdminRepository(session)
     notifs = await admin_repo.get_unread_notifications(user_id)
     unread_count = len(notifs)
 
     # Get user wallet credits
-    from bot.repositories.user_repo import UserRepository
     user_repo = UserRepository(session)
     user = await user_repo.get_user(user_id)
     credits_val = user.credits if user else 0.0
@@ -94,11 +102,14 @@ async def show_main_menu(update: Update, context: CallbackContext, session, user
                 reply_markup=reply_markup
             )
         elif update.callback_query:
-            await update.callback_query.message.reply_text(
-                text=text,
-                parse_mode="HTML",
-                reply_markup=reply_markup
-            )
+            try:
+                await update.callback_query.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+            except Exception:
+                pass
 
 @rate_limit
 @blacklist_check
@@ -126,19 +137,39 @@ async def verify_join_callback(update: Update, context: CallbackContext):
             )
             return
 
-        # If they successfully verified, distribute referral & welcome reward if applicable
+        # Check and give Welcome Reward (+1.0 Credit)
+        admin_repo = AdminRepository(session)
+        user_repo = UserRepository(session)
+        user = await user_repo.get_user(user_id)
+        
+        claimed = await admin_repo.get_setting(f"welcome_claimed:{user_id}")
+        welcome_reward_str = await admin_repo.get_setting("welcome_reward")
+        welcome_reward = float(welcome_reward_str) if welcome_reward_str else 1.0
+
+        welcome_awarded = False
+        if not claimed and user:
+            user.credits += welcome_reward
+            user.lifetime_earned += welcome_reward
+            await admin_repo.set_setting(f"welcome_claimed:{user_id}", "true")
+            await admin_repo.add_notification(user_id, f"🎉 Welcome Reward! Received +{welcome_reward} Credits for joining.")
+            welcome_awarded = True
+
+        # Process referral reward (adds referrer credit if they were referred)
         user_service = UserService(session)
         rewarded, ref_earned, ref_id = await user_service.process_referral_rewards(user_id)
         
-        if rewarded:
-            # Show premium animation welcome text
+        if welcome_awarded or rewarded:
+            ref_msg = ""
+            if rewarded:
+                ref_msg = f"\nYour referrer (ID: {ref_id}) received <b>+{ref_earned} Credits</b>."
+            
             welcome_text = (
-                f"🎉 <b>Welcome Bonus Awarded!</b>\n"
+                f"🎉 <b>Welcome! Congrats!</b>\n"
                 f"{Visual.BORDER}\n"
-                f"Congratulations! You received <b>+1 Credit</b> welcome reward.\n"
-                f"Your referrer (ID: {ref_id}) received <b>+{ref_earned} Credits</b>.\n"
+                f"You received <b>+{welcome_reward} Credit</b> for joining our community.\n{ref_msg}"
                 f"{Visual.BORDER}"
             )
+            await session.commit()
             await query.edit_message_text(
                 text=welcome_text,
                 parse_mode="HTML",
@@ -147,6 +178,37 @@ async def verify_join_callback(update: Update, context: CallbackContext):
         else:
             # Render standard menu dashboard
             await show_main_menu(update, context, session, user_id, query.from_user.first_name, edit=True)
+
+@rate_limit
+@blacklist_check
+async def view_notifications_callback(update: Update, context: CallbackContext):
+    """Lists recent notifications and marks them read."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    async with AsyncSessionLocal() as session:
+        admin_repo = AdminRepository(session)
+        notifs = await admin_repo.get_all_notifications(user_id)
+        
+        text = f"{Visual.header('Notifications')}\n"
+        if not notifs:
+            text += "🔔 You have no recent notifications."
+        else:
+            text += "Here are your recent updates:\n\n"
+            for n in notifs[:5]:
+                status = "✉️" if n.is_read else "📩"
+                text += f"{status} {n.text}\n<pre>{n.created_at.strftime('%m-%d %H:%M')}</pre>\n\n"
+                
+        # Mark read
+        await admin_repo.mark_notifications_read(user_id)
+        await session.commit()
+        
+        await query.edit_message_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=UserKeyboards.back_to_main()
+        )
+        await query.answer()
 
 @rate_limit
 @blacklist_check
@@ -190,3 +252,36 @@ async def menu_navigation_callback(update: Update, context: CallbackContext):
                 reply_markup=UserKeyboards.back_to_main()
             )
             await query.answer()
+
+@rate_limit
+@blacklist_check
+async def reply_keyboard_routing_handler(update: Update, context: CallbackContext):
+    """Routes messages sent by the persistent bottom reply keyboard buttons."""
+    text = update.message.text
+    user_id = update.effective_user.id
+    first_name = update.effective_user.first_name
+
+    async with AsyncSessionLocal() as session:
+        if "Buy Agent" in text:
+            from bot.handlers.user.marketplace import categories_list_callback
+            await categories_list_callback(update, context)
+        elif "Sell Agent" in text:
+            from bot.handlers.seller.register import seller_register_start_callback
+            await seller_register_start_callback(update, context)
+        elif "Wallet" in text:
+            from bot.handlers.user.wallet import wallet_menu_callback
+            await wallet_menu_callback(update, context)
+        elif "Referral" in text:
+            from bot.handlers.user.wallet import referral_menu_callback
+            await referral_menu_callback(update, context)
+        elif "Support" in text:
+            from bot.handlers.support.ticket import support_menu_callback
+            await support_menu_callback(update, context)
+        elif "Report" in text:
+            from bot.handlers.support.ticket import ticket_start_callback
+            await ticket_start_callback(update, context)
+        elif "Claim" in text:
+            from bot.handlers.user.check_in import check_in_callback
+            await check_in_callback(update, context)
+        else:
+            await show_main_menu(update, context, session, user_id, first_name)
