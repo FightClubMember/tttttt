@@ -211,7 +211,13 @@ async def coupon_cancel_callback(update: Update, context: CallbackContext) -> in
     return ConversationHandler.END
 
 coupon_conv_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(coupon_start_callback, pattern="^(wallet:redeem_coupon|user_menu:coupons)$")],
+    entry_points=[
+        CallbackQueryHandler(coupon_start_callback, pattern="^(wallet:redeem_coupon|user_menu:coupons)$"),
+        MessageHandler(
+            filters.Regex(r"(?i).*coupon.*") | (filters.COMMAND & filters.Regex(r"(?i).*coupon.*")),
+            coupon_start_callback
+        )
+    ],
     states={
         COUPON_INPUT_STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, coupon_input_handler)]
     },

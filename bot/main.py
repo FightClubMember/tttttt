@@ -76,6 +76,24 @@ async def main():
 
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
 
+    # Register global error handler
+    from telegram import Update
+    from telegram.ext import CallbackContext
+
+    async def error_handler(update: object, context: CallbackContext) -> None:
+        logger.error(f"Exception while handling an update: {context.error}")
+        if isinstance(update, Update) and update.effective_chat:
+            try:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="⚠️ <b>An unexpected error occurred.</b> Please try again or run /start to reset.",
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
+
+    application.add_error_handler(error_handler)
+
     # 6. Register all handlers (User, Seller, Support, Admin)
     register_all_handlers(application)
     logger.info("Handlers registered successfully.")

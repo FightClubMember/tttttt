@@ -295,7 +295,11 @@ async def ticket_fsm_cancel_callback(update: Update, context: CallbackContext) -
 ticket_conv_handler = ConversationHandler(
     entry_points=[
         CallbackQueryHandler(ticket_create_start_callback, pattern="^ticket:create$"),
-        CallbackQueryHandler(ticket_reply_start_callback, pattern="^ticket:reply:\\d+$")
+        CallbackQueryHandler(ticket_reply_start_callback, pattern="^ticket:reply:\\d+$"),
+        MessageHandler(
+            filters.Regex(r"(?i).*report.*") | (filters.COMMAND & filters.Regex(r"(?i).*report.*")),
+            ticket_create_start_callback
+        )
     ],
     states={
         TICKET_SUBJ_STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, ticket_subject_input_handler)],

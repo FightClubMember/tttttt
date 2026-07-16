@@ -266,7 +266,10 @@ async def cancel_sell_callback(update: Update, context: CallbackContext) -> int:
 seller_conv_handler = ConversationHandler(
     entry_points=[
         CallbackQueryHandler(seller_register_start_callback, pattern="^user_menu:sell$"),
-        MessageHandler(filters.Regex("^📤 Sell Agent$"), seller_register_start_callback)
+        MessageHandler(
+            filters.Regex(r"(?i).*sell agent.*") | (filters.COMMAND & filters.Regex(r"(?i).*sell.*")),
+            seller_register_start_callback
+        )
     ],
     states={
         SELL_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name_input_handler)],
