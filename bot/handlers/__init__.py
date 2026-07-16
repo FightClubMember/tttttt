@@ -5,7 +5,7 @@ from bot.handlers.user.base import (
     start_command, verify_join_callback, menu_navigation_callback,
     reply_keyboard_routing_handler, view_notifications_callback
 )
-from bot.handlers.user.wallet import wallet_menu_callback, referral_menu_callback, export_statement_callback, coupon_conv_handler
+from bot.handlers.user.wallet import wallet_menu_callback, referral_menu_callback, export_statement_callback, coupon_conv_handler, coupon_start_callback
 from bot.handlers.user.check_in import check_in_callback
 from bot.handlers.user.marketplace import (
     categories_list_callback, category_agents_callback, agent_details_callback,
@@ -13,8 +13,8 @@ from bot.handlers.user.marketplace import (
     toggle_wl_callback, view_favorites_callback, view_wishlist_callback, search_conv_handler, 
     review_conv_handler
 )
-from bot.handlers.support.ticket import support_menu_callback, view_ticket_callback, close_ticket_callback, ticket_conv_handler
-from bot.handlers.seller.register import seller_conv_handler
+from bot.handlers.support.ticket import support_menu_callback, view_ticket_callback, close_ticket_callback, ticket_conv_handler, ticket_create_start_callback
+from bot.handlers.seller.register import seller_conv_handler, seller_register_start_callback
 from bot.handlers.admin.dashboard import admin_dashboard_callback, stats_view_callback, admin_close_callback, admin_command_handler
 from bot.handlers.admin.users import (
     admin_users_menu_callback, usract_routing_callback, otp_callback_handler,
@@ -44,6 +44,15 @@ def register_all_handlers(application: Application):
     # 1. Command Handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("admin", admin_command_handler))
+    
+    # Fallback command handlers for direct access
+    application.add_handler(CommandHandler("buy", categories_list_callback))
+    application.add_handler(CommandHandler("sell", seller_register_start_callback))
+    application.add_handler(CommandHandler("wallet", wallet_menu_callback))
+    application.add_handler(CommandHandler("referral", referral_menu_callback))
+    application.add_handler(CommandHandler("support", support_menu_callback))
+    application.add_handler(CommandHandler("report", ticket_create_start_callback))
+    application.add_handler(CommandHandler("coupons", coupon_start_callback))
 
     # 2. Reply Keyboard button click MessageHandler (High Priority)
     # Intercepts navigation buttons to break users out of stuck FSMs immediately

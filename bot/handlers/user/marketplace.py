@@ -170,28 +170,35 @@ async def buy_agent_callback(update: Update, context: CallbackContext):
     agent_id = int(query.data.split(":")[2])
     user_id = query.from_user.id
 
-    async with AsyncSessionLocal() as session:
-        market_service = MarketplaceService(session)
-        success, message, order = await market_service.purchase_agent(user_id, agent_id)
+    try:
+        async with AsyncSessionLocal() as session:
+            market_service = MarketplaceService(session)
+            success, message, order = await market_service.purchase_agent(user_id, agent_id)
 
-        if not success:
-            await query.answer(message, show_alert=True)
-            return
+            if not success:
+                await query.answer(message, show_alert=True)
+                return
 
-        # Transaction success visual card
-        agent = await market_service.agent_repo.get_agent(agent_id)
-        text = (
-            f"{Visual.header('Purchase Successful!')}\n"
-            f"🎉 You successfully bought <b>{agent.name}</b>!\n"
-            f"💸 Price paid: <b>{agent.price} Credits</b>\n\n"
-            f"You can now download the agent files below."
-        )
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=UserKeyboards.download_agent(agent.file_id, agent.id)
-        )
-        await query.answer("🛒 Purchased successfully!")
+            # Transaction success visual card
+            agent = await market_service.agent_repo.get_agent(agent_id)
+            text = (
+                f"{Visual.header('Purchase Successful!')}\n"
+                f"🎉 You successfully bought <b>{agent.name}</b>!\n"
+                f"💸 Price paid: <b>{agent.price} Credits</b>\n\n"
+                f"You can now download the agent files below."
+            )
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=UserKeyboards.download_agent(agent.file_id, agent.id)
+            )
+            await query.answer("🛒 Purchased successfully!")
+    except Exception as e:
+        logger.error(f"Error in buy_agent_callback: {e}")
+        try:
+            await query.answer("⚠️ Transaction failed or timed out. Please try again.", show_alert=True)
+        except Exception:
+            pass
 
 @rate_limit
 @blacklist_check
@@ -201,36 +208,43 @@ async def download_file_callback(update: Update, context: CallbackContext):
     agent_id = int(query.data.split(":")[2])
     user_id = query.from_user.id
 
-    await query.answer("📥 Preparing files download link...")
+    try:
+        await query.answer("📥 Preparing files download link...")
 
-    async with AsyncSessionLocal() as session:
-        agent_repo = AgentRepository(session)
-        # Check if they own the order
-        orders = await agent_repo.get_user_orders(user_id)
-        owns_item = False
-        target_agent = None
-        for order in orders:
-            for item in order.items:
-                if item.agent_id == agent_id:
-                    owns_item = True
-                    target_agent = item.agent
+        async with AsyncSessionLocal() as session:
+            agent_repo = AgentRepository(session)
+            # Check if they own the order
+            orders = await agent_repo.get_user_orders(user_id)
+            owns_item = False
+            target_agent = None
+            for order in orders:
+                for item in order.items:
+                    if item.agent_id == agent_id:
+                        owns_item = True
+                        target_agent = item.agent
+                        break
+                if owns_item:
                     break
-            if owns_item:
-                break
 
-        if not owns_item or not target_agent:
-            await query.answer("❌ You haven't purchased this agent yet.", show_alert=True)
-            return
+            if not owns_item or not target_agent:
+                await query.answer("❌ You haven't purchased this agent yet.", show_alert=True)
+                return
 
-        # Deliver file using telegram file_id
-        await context.bot.send_document(
-            chat_id=user_id,
-            document=target_agent.file_id,
-            filename=f"{target_agent.name.replace(' ', '_')}_v{target_agent.version}.zip",
-            caption=f"📦 <b>{target_agent.name} v{target_agent.version}</b>\n\nHere are your files! Thank you for purchasing from our marketplace.",
-            parse_mode="HTML",
-            reply_markup=UserKeyboards.back_to_main()
-        )
+            # Deliver file using telegram file_id
+            await context.bot.send_document(
+                chat_id=user_id,
+                document=target_agent.file_id,
+                filename=f"{target_agent.name.replace(' ', '_')}_v{target_agent.version}.zip",
+                caption=f"📦 <b>{target_agent.name} v{target_agent.version}</b>\n\nHere are your files! Thank you for purchasing from our marketplace.",
+                parse_mode="HTML",
+                reply_markup=UserKeyboards.back_to_main()
+            )
+    except Exception as e:
+        logger.error(f"Error in download_file_callback: {e}")
+        try:
+            await query.message.reply_text("⚠️ Failed to deliver files. Please try again.")
+        except Exception:
+            pass
 
 # FAVORITES AND WISHLISTS DYNAMICS
 @rate_limit
