@@ -268,6 +268,17 @@ async def reply_keyboard_routing_handler(update: Update, context: CallbackContex
     user_id = update.effective_user.id
     first_name = update.effective_user.first_name
 
+    # Reset any active FSM states for the user to prevent getting stuck in conversation contexts
+    try:
+        from telegram.ext import ConversationHandler
+        for handler in context.application.handlers[0]:
+            if isinstance(handler, ConversationHandler):
+                key = handler._get_key(update)
+                if key:
+                    handler.update_state(ConversationHandler.END, key)
+    except Exception as e:
+        logger.error(f"Error resetting conversation states: {e}")
+
     async with AsyncSessionLocal() as session:
         text_lower = text.lower()
         if "buy agent" in text_lower:

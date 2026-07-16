@@ -16,6 +16,37 @@ logger = logging.getLogger(__name__)
 @rate_limit
 @blacklist_check
 @admin_only
+async def admin_command_handler(update: Update, context: CallbackContext):
+    """Command entry point for /admin dashboard rendering."""
+    async with AsyncSessionLocal() as session:
+        user_repo = UserRepository(session)
+        agent_repo = AgentRepository(session)
+
+        users = await user_repo.get_all_users()
+        categories = await agent_repo.get_all_categories(include_hidden=True)
+        mod_queue = await agent_repo.get_pending_moderation_queue()
+        
+        total_issued = sum(u.lifetime_earned for u in users)
+        total_spent = sum(u.lifetime_spent for u in users)
+
+        text = (
+            f"{Visual.header('Admin Dashboard', 'Management Console')}\n"
+            f"👥 Total Users: <b>{len(users)}</b>\n"
+            f"📂 Categories: <b>{len(categories)}</b>\n"
+            f"📦 Pending moderation: <b>{len(mod_queue)} agents</b>\n\n"
+            f"💰 Total Credits Issued: <b>{total_issued:.1f}</b>\n"
+            f"💸 Total Credits Spent: <b>{total_spent:.1f}</b>\n\n"
+            f"Select a module from the options below to configure system data."
+        )
+        await update.message.reply_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=AdminKeyboards.dashboard()
+        )
+
+@rate_limit
+@blacklist_check
+@admin_only
 async def admin_dashboard_callback(update: Update, context: CallbackContext):
     """Renders the advanced Admin Panel control dashboard."""
     query = update.callback_query
@@ -23,7 +54,6 @@ async def admin_dashboard_callback(update: Update, context: CallbackContext):
     async with AsyncSessionLocal() as session:
         user_repo = UserRepository(session)
         agent_repo = AgentRepository(session)
-        admin_repo = AdminRepository(session)
 
         # Retrieve statistics summary
         users = await user_repo.get_all_users()
@@ -43,12 +73,21 @@ async def admin_dashboard_callback(update: Update, context: CallbackContext):
             f"💸 Total Credits Spent: <b>{total_spent:.1f}</b>\n\n"
             f"Select a module from the options below to configure system data."
         )
-        await query.edit_message_text(
-            text=text,
-            parse_mode="HTML",
-            reply_markup=AdminKeyboards.dashboard()
-        )
-        await query.answer()
+        reply_markup = AdminKeyboards.dashboard()
+        if query:
+            await query.edit_message_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+            await query.answer()
+        else:
+            if update.message:
+                await update.message.reply_text(
+                    text=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
 
 @rate_limit
 @blacklist_check

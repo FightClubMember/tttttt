@@ -188,8 +188,8 @@ async def admin_approve_reward_handler(update: Update, context: CallbackContext)
             )
             return ConversationHandler.END
 
-        # Approve and publish agent listing
-        agent.status = "active"
+        # Approve and buy agent listing (keep private, set to sold)
+        agent.status = "sold"
         
         # Credit seller user
         user_repo = UserRepository(session)
@@ -209,7 +209,7 @@ async def admin_approve_reward_handler(update: Update, context: CallbackContext)
 
     text = (
         f"{Visual.header('Approval Complete')}\n"
-        f"✅ <b>Listing approved successfully!</b>\n\n"
+        f"✅ <b>Submission approved successfully!</b>\n\n"
         f"Granted <b>+{reward_amount} Credits</b> to Seller (ID: {agent.seller_id})."
     )
     

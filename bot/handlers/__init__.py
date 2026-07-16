@@ -15,7 +15,7 @@ from bot.handlers.user.marketplace import (
 )
 from bot.handlers.support.ticket import support_menu_callback, view_ticket_callback, close_ticket_callback, ticket_conv_handler
 from bot.handlers.seller.register import seller_conv_handler
-from bot.handlers.admin.dashboard import admin_dashboard_callback, stats_view_callback, admin_close_callback
+from bot.handlers.admin.dashboard import admin_dashboard_callback, stats_view_callback, admin_close_callback, admin_command_handler
 from bot.handlers.admin.users import (
     admin_users_menu_callback, usract_routing_callback, otp_callback_handler,
     users_search_conv, credits_adj_conv, warn_user_conv
@@ -41,16 +41,25 @@ from bot.handlers.admin.settings import (
 def register_all_handlers(application: Application):
     """Registers all bot handlers systematically to the application."""
     
-    # 1. Start command & Reply Keyboard message router
+    # 1. Command Handlers
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("admin", admin_command_handler))
+
+    # 2. Reply Keyboard button click MessageHandler (High Priority)
+    # Intercepts navigation buttons to break users out of stuck FSMs immediately
+    reply_keyboard_buttons = [
+        "🛒 Buy Agent", "📤 Sell Agent", "👛 Wallet", "👥 Referral",
+        "🆘 Support", "🚩 Report", "🎟 Coupons"
+    ]
     application.add_handler(
         MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
+            filters.Regex("^(🛒 Buy Agent|📤 Sell Agent|👛 Wallet|👥 Referral|🆘 Support|🚩 Report|🎟 Coupons)$") |
+            filters.Text(reply_keyboard_buttons),
             reply_keyboard_routing_handler
         )
     )
 
-    # 2. Conversation FSM Handlers (higher priority first)
+    # 3. Conversation FSM Handlers (higher priority first)
     application.add_handler(seller_conv_handler)
     application.add_handler(ticket_conv_handler)
     application.add_handler(coupon_conv_handler)
@@ -66,12 +75,12 @@ def register_all_handlers(application: Application):
     application.add_handler(backup_restore_conv)
     application.add_handler(admin_moderation_conv)
 
-    # 3. Base navigation callbacks
+    # 4. Base navigation callbacks
     application.add_handler(CallbackQueryHandler(verify_join_callback, pattern="^force_join:verify$"))
     application.add_handler(CallbackQueryHandler(verify_join_callback, pattern="^force_join:refresh$"))
     application.add_handler(CallbackQueryHandler(menu_navigation_callback, pattern="^user_menu:(main|about|settings)$"))
 
-    # 4. User flow callbacks
+    # 5. User flow callbacks
     application.add_handler(CallbackQueryHandler(wallet_menu_callback, pattern="^user_menu:wallet$"))
     application.add_handler(CallbackQueryHandler(referral_menu_callback, pattern="^user_menu:referral$"))
     application.add_handler(CallbackQueryHandler(export_statement_callback, pattern="^wallet:export_statement$"))
@@ -81,7 +90,7 @@ def register_all_handlers(application: Application):
     application.add_handler(CallbackQueryHandler(view_wishlist_callback, pattern="^user_menu:wishlist$"))
     application.add_handler(CallbackQueryHandler(view_notifications_callback, pattern="^user_menu:notifications$"))
 
-    # 5. Catalog callbacks
+    # 6. Catalog callbacks
     application.add_handler(CallbackQueryHandler(categories_list_callback, pattern="^user_menu:buy$"))
     application.add_handler(CallbackQueryHandler(category_agents_callback, pattern="^catalog:cat:\\d+$"))
     application.add_handler(CallbackQueryHandler(agent_details_callback, pattern="^catalog:agent:\\d+$"))
@@ -91,11 +100,11 @@ def register_all_handlers(application: Application):
     application.add_handler(CallbackQueryHandler(toggle_fav_callback, pattern="^catalog:toggle_fav:\\d+$"))
     application.add_handler(CallbackQueryHandler(toggle_wl_callback, pattern="^catalog:toggle_wl:\\d+$"))
 
-    # 6. Ticket management callbacks
+    # 7. Ticket management callbacks
     application.add_handler(CallbackQueryHandler(view_ticket_callback, pattern="^ticket:view:\\d+$"))
     application.add_handler(CallbackQueryHandler(close_ticket_callback, pattern="^ticket:close:\\d+$"))
 
-    # 7. Admin control panel callbacks
+    # 8. Admin control panel callbacks
     application.add_handler(CallbackQueryHandler(admin_dashboard_callback, pattern="^admin:dashboard$"))
     application.add_handler(CallbackQueryHandler(admin_close_callback, pattern="^admin:close$"))
     application.add_handler(CallbackQueryHandler(stats_view_callback, pattern="^admin:menu:stats$"))
