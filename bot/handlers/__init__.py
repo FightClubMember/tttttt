@@ -55,15 +55,11 @@ def register_all_handlers(application: Application):
     application.add_handler(CommandHandler("coupons", coupon_start_callback))
 
     # 2. Reply Keyboard button click MessageHandler (High Priority)
-    # Intercepts navigation buttons to break users out of stuck FSMs immediately
-    reply_keyboard_buttons = [
-        "🛒 Buy Agent", "📤 Sell Agent", "👛 Wallet", "👥 Referral",
-        "🆘 Support", "🚩 Report", "🎟 Coupons"
-    ]
+    # Intercepts navigation buttons to break users out of stuck FSMs immediately.
+    # Uses case-insensitive regex matching the end of the line to bypass variation selector emojis on mobile devices.
     application.add_handler(
         MessageHandler(
-            filters.Regex("^(🛒 Buy Agent|📤 Sell Agent|👛 Wallet|👥 Referral|🆘 Support|🚩 Report|🎟 Coupons)$") |
-            filters.Text(reply_keyboard_buttons),
+            filters.Regex(r"(?i).*(buy agent|sell agent|wallet|referral|support|report|coupon)s?$"),
             reply_keyboard_routing_handler
         )
     )
