@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: marketplace_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketplace
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: marketplace_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  bot:
+    build: .
+    container_name: marketplace_bot
+    restart: always
+    depends_on:
+      - db
+      - redis
+    environment:
+      - BOT_TOKEN=your_telegram_bot_token_here
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/marketplace
+      - REDIS_URL=redis://redis:6379/0
+      - ADMIN_IDS=123456789
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
+  redis_data:
