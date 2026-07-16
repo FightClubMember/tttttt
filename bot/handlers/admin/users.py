@@ -12,6 +12,7 @@ from bot.states.fsm import ADMIN_USER_SEARCH, ADMIN_ADD_CREDITS, ADMIN_REMOVE_CR
 from bot.utils.visual import Visual
 from bot.utils.otp import OTPProvider
 from bot.cache.redis_cache import cache
+from bot.handlers.admin.dashboard import admin_dashboard_callback
 
 logger = logging.getLogger(__name__)
 
