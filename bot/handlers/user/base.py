@@ -63,7 +63,7 @@ async def start_command(update: Update, context: CallbackContext):
         await show_main_menu(update, context, session, user_id, first_name)
 
 async def show_main_menu(update: Update, context: CallbackContext, session, user_id: int, first_name: str, edit: bool = False):
-    """Auxiliary function to render the Main Menu dashboard with premium banner branding."""
+    """Auxiliary function to render the Main Menu dashboard with premium card branding."""
     # Count unread notifications
     admin_repo = AdminRepository(session)
     notifs = await admin_repo.get_unread_notifications(user_id)
@@ -76,18 +76,19 @@ async def show_main_menu(update: Update, context: CallbackContext, session, user
 
     # Welcome banner with bot branding
     banner = (
-        f"⚡ <b>M O N E Y   A G E N T   M A R K E T P L A C E</b> ⚡\n"
-        f"<i>Secure • Fast • Automated Bot Exchange</i>\n"
-        f"{Visual.BORDER}\n"
+        f"╔════════════════════════════╗\n"
+        f"   ⚡ <b>MONEY AGENT MARKETPLACE</b> ⚡\n"
+        f"   <i>Automated • Secure • Premium Bot Trade</i>\n"
+        f"╚════════════════════════════╝\n\n"
     )
 
     text = (
         f"{banner}"
-        f"👤 User Account: <b>{first_name}</b>\n"
-        f"💰 Wallet Balance: <b>{credits_val} Credits</b>\n"
-        f"📩 Unread Notifications: <b>{unread_count}</b>\n"
-        f"{Visual.BORDER}\n"
-        f"Explore, purchase, or upload automation agents. Use the persistent bottom menu to navigate seamlessly!"
+        f"👤 <b>Account Owner:</b> {first_name}\n"
+        f"💳 <b>Wallet Balance:</b> <code>{credits_val:.2f} Credits</code>\n"
+        f"🔔 <b>System Notifications:</b> <code>{unread_count} Unread</code>\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💡 <i>Use the persistent menu at the bottom of your screen to buy, sell, check your wallet, or contact support instantly!</i>"
     )
 
     from bot.config import settings

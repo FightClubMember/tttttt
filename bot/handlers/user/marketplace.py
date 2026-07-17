@@ -102,27 +102,39 @@ async def agent_details_callback(update: Update, context: CallbackContext):
         seller = await user_repo.get_user(agent.seller_id)
         seller_name = seller.first_name if seller else "Unknown Seller"
 
-        features_list = agent.features.split(",") if agent.features else []
-        features_str = "\n".join(f"   • {f.strip()}" for f in features_list if f.strip())
+        features_list = [f.strip() for f in agent.features.split(",") if f.strip()] if agent.features else []
+
+        stars_visual = "★" * int(round(agent.rating)) + "☆" * (5 - int(round(agent.rating)))
+        stock_str = "Unlimited" if agent.stock == -1 else f"{agent.stock} units"
 
         text = (
-            f"{Visual.header('Agent Details')}\n"
-            f"📦 <b>Name:</b> {agent.name}\n"
-            f"🏷 <b>Version:</b> v{agent.version}\n"
-            f"💰 <b>Price:</b> <b>{agent.price} Credits</b>\n"
+            f"╔════════════════════════════╗\n"
+            f"   📦 <b>PRODUCT SPECIFICATIONS</b>\n"
+            f"╚════════════════════════════╝\n\n"
+            f"🤖 <b>Agent Name:</b> <b>{agent.name}</b>\n"
+            f"🏷 <b>Version:</b> <code>v{agent.version}</code>\n"
+            f"⭐ <b>Client Rating:</b> <code>{stars_visual} ({agent.rating:.1f}/5.0)</code>\n"
             f"👤 <b>Seller:</b> {seller_name}\n"
-            f"⭐ <b>Rating:</b> {agent.rating} / 5.0\n"
-            f"📥 <b>Downloads:</b> {agent.downloads}\n"
-            f"📦 <b>Stock:</b> {'Unlimited' if agent.stock == -1 else agent.stock}\n\n"
-            f"📝 <b>Description:</b>\n{agent.description}\n\n"
+            f"📥 <b>Downloads:</b> <code>{agent.downloads} completed</code>\n"
+            f"📦 <b>Stock Status:</b> <code>{stock_str}</code>\n\n"
+            f"💰 <b>Purchase Price:</b> <code>{agent.price:.2f} Credits</code>\n\n"
+            f"📜 <b>Description:</b>\n"
+            f"<i>{agent.description}</i>\n\n"
         )
-        if features_str:
-            text += f"🚀 <b>Features:</b>\n{features_str}\n\n"
+        if features_list:
+            text += f"⚡ <b>Key Features & Specifications:</b>\n"
+            for idx, f in enumerate(features_list):
+                connector = " └─ " if idx == len(features_list) - 1 else " ├─ "
+                text += f"{connector}<code>{f}</code>\n"
+            text += "\n"
             
         if agent.demo_url:
-            text += f"🌐 <b>Live Demo:</b> {agent.demo_url}\n\n"
+            text += f"🌐 <b>Live Demo Link:</b> {agent.demo_url}\n\n"
 
-        text += Visual.footer()
+        text += (
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🛒 <i>Click 'Buy Agent' below to review terms and complete your purchase securely.</i>"
+        )
 
         await query.edit_message_text(
             text=text,

@@ -35,13 +35,17 @@ async def wallet_menu_callback(update: Update, context: CallbackContext):
             return
 
         text = (
-            f"{Visual.header('Your Wallet')}\n"
-            f"💰 Credits Balance: <b>{user.credits} Credits</b>\n"
-            f"📈 Lifetime Earned: <b>{user.lifetime_earned} Credits</b>\n"
-            f"📉 Lifetime Spent: <b>{user.lifetime_spent} Credits</b>\n\n"
-            f"🛒 Purchased Credits: <b>{user.purchased_credits} Credits</b>\n"
-            f"📤 Sold Credits: <b>{user.sold_credits} Credits</b>\n"
-            f"{Visual.footer()}"
+            f"╔════════════════════════════╗\n"
+            f"   👛 <b>YOUR FINANCIAL WALLET</b>\n"
+            f"╚════════════════════════════╝\n\n"
+            f"💵 <b>Current Balance:</b> <code>{user.credits:.2f} Credits</code>\n\n"
+            f"📊 <b>Transaction Overview:</b>\n"
+            f" ├─ 📈 <b>Lifetime Earnings:</b> <code>+{user.lifetime_earned:.2f} Credits</code>\n"
+            f" ├─ 📉 <b>Lifetime Expenditures:</b> <code>-{user.lifetime_spent:.2f} Credits</code>\n"
+            f" ├─ 🛒 <b>Total Credits Purchased:</b> <code>{user.purchased_credits:.2f} Credits</code>\n"
+            f" └─ 📤 <b>Total Credits Sold:</b> <code>{user.sold_credits:.2f} Credits</code>\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🎟 <i>Have a promotional coupon? Use the Coupons button below to redeem it instantly.</i>"
         )
         reply_markup = UserKeyboards.wallet_menu()
         if query:
@@ -81,19 +85,26 @@ async def referral_menu_callback(update: Update, context: CallbackContext):
         ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
 
         text = (
-            f"{Visual.header('Referral Program')}\n"
-            f"👥 Invite your friends and earn premium rewards!\n\n"
-            f"💎 Reward: <b>+{ref_reward} Credits</b> per verified referral.\n"
-            f"📊 Total Referrals: <b>{ref_count} Users</b>\n\n"
-            f"🔗 Your Invite Link:\n<code>{ref_link}</code>\n\n"
-            f"🏆 <b>Referral Leaderboard</b>\n"
+            f"╔════════════════════════════╗\n"
+            f"   👥 <b>AFFILIATE & REFERRAL</b>\n"
+            f"╚════════════════════════════╝\n\n"
+            f"🎁 Share your invite link and earn premium rewards!\n"
+            f"💎 <b>Affiliate Bonus:</b> <code>+{ref_reward:.1f} Credits</code> per verified invite.\n\n"
+            f"📊 <b>Your Affiliate Stats:</b>\n"
+            f" └─ 👥 <b>Successful Referrals:</b> <code>{ref_count} Members</code>\n\n"
+            f"🔗 <b>Your Unique Invitation Link:</b>\n"
+            f"<code>{ref_link}</code>\n\n"
+            f"🏆 <b>Top Affiliate Leaderboard:</b>\n"
         )
         
         for idx, (usr, count) in enumerate(leaderboard, 1):
             name = usr.first_name or f"User {usr.id}"
-            text += f" {idx}. {name} — <b>{count} invites</b>\n"
+            text += f"  {idx}. {name} — <code>{count} invites</code>\n"
 
-        text += Visual.footer()
+        text += (
+            f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"💡 <i>Invitees must complete channel verification for the reward to be credited.</i>"
+        )
         reply_markup = UserKeyboards.back_to_main()
         
         if query:

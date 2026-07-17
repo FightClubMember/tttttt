@@ -28,10 +28,18 @@ async def support_menu_callback(update: Update, context: CallbackContext):
         tickets = await admin_repo.get_user_tickets(user_id)
 
         text = (
-            f"{Visual.header('Support Center')}\n"
-            f"Need assistance? Open a support ticket below, view your tickets, "
-            f"or contact us directly on Telegram: <b>@Agen_Supporrt_bot</b>\n\n"
+            f"╔════════════════════════════╗\n"
+            f"   🆘 <b>SUPPORT PORTAL & DESK</b>\n"
+            f"╚════════════════════════════╝\n\n"
+            f"Need assistance? Open a support ticket below, view your active cases, "
+            f"or chat directly on Telegram: <b>@Agen_Supporrt_bot</b>\n\n"
+            f"🎫 <b>Your Support History:</b>\n"
         )
+        if not tickets:
+            text += " └─ <i>You have no open support tickets.</i>\n"
+        else:
+            text += f" Found <b>{len(tickets)}</b> tickets:\n"
+            
         keyboard = []
         for ticket in tickets:
             status_emoji = "🟢" if ticket.status == "open" else "🟡" if ticket.status == "assigned" else "🔴"
